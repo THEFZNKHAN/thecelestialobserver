@@ -1,36 +1,52 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# The Celestial Observer
 
-## Getting Started
+A responsive Next.js MVP inspired by the provided Figma design for daily Islamic essentials:
 
-First, run the development server:
+- Current and next prayer focus
+- Full daily prayer times
+- Hijri date display
+- Qibla direction
+- Browser-only saved preferences (city, country, calculation method)
+
+## Tech
+
+- Next.js 16 + App Router + TypeScript
+- Tailwind CSS
+- Zod for API response validation
+- date-fns + date-fns-tz for time utilities
+- AlAdhan free public APIs
+
+References:
+
+- [Figma Design](https://www.figma.com/design/spRfqfWp8BlIjxbjXU2ol8/The-Celestial-Observer?node-id=0-1&p=f&t=ETCpxlM9GRPZmBXh-0)
+- [AlAdhan](https://aladhan.com/)
+- [Prayer Times API](https://aladhan.com/prayer-times-api)
+
+## Run Locally
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open `http://localhost:3000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Build
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run build
+npm run start
+```
 
-## Learn More
+## API Usage
 
-To learn more about Next.js, take a look at the following resources:
+The UI calls:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- `GET /api/dashboard?city=Karachi&country=Pakistan&method=2`
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+The route internally calls AlAdhan:
 
-## Deploy on Vercel
+- `timingsByCity`
+- `qibla`
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+No API key is required for this MVP.
