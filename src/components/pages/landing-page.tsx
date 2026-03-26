@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-import { getCurrentAndNextPrayer } from "@/lib/prayer";
+import { buildPrayerDate, getCurrentAndNextPrayer, getNowInTimeZone } from "@/lib/prayer";
 import { defaultPreferences, getStoredPreferences, setStoredPreferences } from "@/lib/storage";
 import { MobileBottomNav } from "@/components/site/mobile-bottom-nav";
 import { TopNav } from "@/components/site/top-nav";
@@ -13,6 +13,7 @@ export function LandingPage() {
     const [data, setData] = useState<DashboardData | null>(null);
     const [loading, setLoading] = useState(true);
     const [now, setNow] = useState(new Date());
+    const [timezone, setTimezone] = useState("Asia/Kolkata");
     const [locationModal, setLocationModal] = useState<"search" | "geo" | null>(null);
     const [cityInput, setCityInput] = useState("");
     const [countryInput, setCountryInput] = useState("");
@@ -41,9 +42,12 @@ export function LandingPage() {
         return fetch(`/api/dashboard?${params.toString()}`)
             .then((res) => res.json())
             .then((payload: DashboardData) => {
+                const tz = payload.timings.timezone || "Asia/Kolkata";
+                setTimezone(tz);
+                const baseDateInTz = getNowInTimeZone(tz);
                 payload.timings.prayers = payload.timings.prayers.map((prayer) => ({
                     ...prayer,
-                    date: new Date(prayer.date),
+                    date: buildPrayerDate(prayer.time24, baseDateInTz),
                 }));
                 setData(payload);
             });
@@ -107,10 +111,12 @@ export function LandingPage() {
         return () => controller.abort();
     }, [cityInput, locationModal]);
 
+    const nowInTimezone = useMemo(() => getNowInTimeZone(timezone), [now, timezone]);
+
     const focus = useMemo(() => {
         if (!data) return null;
-        return getCurrentAndNextPrayer(data.timings.prayers, now);
-    }, [data, now]);
+        return getCurrentAndNextPrayer(data.timings.prayers, nowInTimezone);
+    }, [data, nowInTimezone]);
 
     const fastingPercent = useMemo(() => {
         if (!data) return 0;
@@ -118,13 +124,13 @@ export function LandingPage() {
         const maghrib = data.timings.prayers.find((p) => p.name === "Maghrib")?.date;
 
         if (!fajr || !maghrib) return 0;
-        if (now <= fajr) return 0;
-        if (now >= maghrib) return 100;
+        if (nowInTimezone <= fajr) return 0;
+        if (nowInTimezone >= maghrib) return 100;
 
         const total = maghrib.getTime() - fajr.getTime();
-        const elapsed = now.getTime() - fajr.getTime();
+        const elapsed = nowInTimezone.getTime() - fajr.getTime();
         return Math.max(0, Math.min(100, Math.round((elapsed / total) * 100)));
-    }, [data, now]);
+    }, [data, nowInTimezone]);
 
     const heroImage =
         "https://lh3.googleusercontent.com/aida-public/AB6AXuDrhYPiUeYxA3H-JuKLabCABCpmE3ttUJqV7vTNxEc9Tnb9u0I0cVN1xrIxTiM4uGMHsIAa4YOouWmo45qvRx4pfNhMpfb3n46GiG33I6SWAdWIMkRkY0pSErGcJdWz7Csntd2EPaeopC5J_4s87Rbhh8i8nHjDDxJXf4V3KpoR2ehOfMX8YXLtMMlJd_jY5f_g25zGDmHhmVGGTxnOm9HIQ0uCX8cM8NJwG858G4jNHy-ePXsusloJBTL3BzZh2TCrBroYUF6uDHk";
@@ -137,14 +143,14 @@ export function LandingPage() {
     ];
 
     const dailyQuote = useMemo(() => {
-        const start = new Date(now.getFullYear(), 0, 0);
-        const diff = now.getTime() - start.getTime();
+        const start = new Date(nowInTimezone.getFullYear(), 0, 0);
+        const diff = nowInTimezone.getTime() - start.getTime();
         const dayOfYear = Math.floor(diff / 86_400_000);
         return quotes[dayOfYear % quotes.length];
-    }, [now]);
+    }, [nowInTimezone]);
 
     const formatCountdown = (target: Date) => {
-        const ms = target.getTime() - now.getTime();
+        const ms = target.getTime() - nowInTimezone.getTime();
         if (ms <= 0) return "0M";
         const totalMinutes = Math.floor(ms / 60000);
         const h = Math.floor(totalMinutes / 60);
@@ -155,7 +161,7 @@ export function LandingPage() {
     const getNextOccurrence = (name: "Fajr" | "Maghrib") => {
         const base = data?.timings.prayers.find((p) => p.name === name)?.date;
         if (!base) return null;
-        if (base > now) return base;
+        if (base > nowInTimezone) return base;
         const next = new Date(base);
         next.setDate(next.getDate() + 1);
         return next;
