@@ -48,6 +48,31 @@ export const getCountdownLabel = (nextDate: Date, now = new Date()): string => {
     return `${hours}h ${minutes}m`;
 };
 
+export const getNowInTimeZone = (timeZone: string): Date => {
+    const parts = new Intl.DateTimeFormat("en-US", {
+        timeZone,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hourCycle: "h23",
+    }).formatToParts(new Date());
+
+    const pick = (type: string) => Number(parts.find((p) => p.type === type)?.value ?? "0");
+    const year = pick("year");
+    const month = pick("month");
+    const day = pick("day");
+    const hour = pick("hour");
+    const minute = pick("minute");
+    const second = pick("second");
+
+    // Intentionally creates a local Date carrying the selected timezone wall-clock.
+    // Comparisons stay consistent as long as both "now" and prayer times are built this way.
+    return new Date(year, month - 1, day, hour, minute, second);
+};
+
 export const getFastingProgress = (fajrDate: Date, maghribDate: Date, now = new Date()): string => {
     if (isAfter(fajrDate, now)) {
         return "Fasting has not started yet";

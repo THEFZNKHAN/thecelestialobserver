@@ -4,7 +4,7 @@ import { differenceInMinutes, format } from "date-fns";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 
-import { getCurrentAndNextPrayer } from "@/lib/prayer";
+import { buildPrayerDate, getCurrentAndNextPrayer, getNowInTimeZone } from "@/lib/prayer";
 import { MobileBottomNav } from "@/components/site/mobile-bottom-nav";
 import { TopNav } from "@/components/site/top-nav";
 import { defaultPreferences, getStoredPreferences } from "@/lib/storage";
@@ -25,6 +25,7 @@ export function PrayerPage() {
     const [calendarDays, setCalendarDays] = useState<CalendarDay[]>([]);
     const [loading, setLoading] = useState(true);
     const [now, setNow] = useState(new Date());
+    const [timezone, setTimezone] = useState("Asia/Kolkata");
 
     useEffect(() => {
         const stored = getStoredPreferences();
@@ -41,9 +42,12 @@ export function PrayerPage() {
         fetch(`/api/dashboard?${params.toString()}`)
             .then((res) => res.json())
             .then((payload: DashboardData) => {
+                const tz = payload.timings.timezone || "Asia/Kolkata";
+                setTimezone(tz);
+                const baseDateInTz = getNowInTimeZone(tz);
                 payload.timings.prayers = payload.timings.prayers.map((prayer) => ({
                     ...prayer,
-                    date: new Date(prayer.date),
+                    date: buildPrayerDate(prayer.time24, baseDateInTz),
                 }));
                 setData(payload);
                 const currentMonth = now.getMonth() + 1;
@@ -84,10 +88,12 @@ export function PrayerPage() {
         return () => clearInterval(timer);
     }, []);
 
+    const nowInTimezone = useMemo(() => getNowInTimeZone(timezone), [now, timezone]);
+
     const focus = useMemo(() => {
         if (!data) return null;
-        return getCurrentAndNextPrayer(data.timings.prayers, now);
-    }, [data, now]);
+        return getCurrentAndNextPrayer(data.timings.prayers, nowInTimezone);
+    }, [data, nowInTimezone]);
 
     const qiblaDirection = data?.qibla.direction ?? 0;
     const qiblaCardinal = (() => {
@@ -97,26 +103,26 @@ export function PrayerPage() {
 
     const nextPrayerCountdown = useMemo(() => {
         if (!focus) return "0m";
-        const total = Math.max(differenceInMinutes(focus.next.date, now), 0);
+        const total = Math.max(differenceInMinutes(focus.next.date, nowInTimezone), 0);
         const h = Math.floor(total / 60);
         const m = total % 60;
         return h > 0 ? `${h}h ${m}m` : `${m}m`;
-    }, [focus, now]);
+    }, [focus, nowInTimezone]);
 
     const nextPrayerMinutes = useMemo(() => {
         if (!focus) return 0;
-        return Math.max(differenceInMinutes(focus.next.date, now), 0);
-    }, [focus, now]);
+        return Math.max(differenceInMinutes(focus.next.date, nowInTimezone), 0);
+    }, [focus, nowInTimezone]);
 
     const fastingElapsed = useMemo(() => {
         if (!data) return "0h 0m";
         const fajr = data.timings.prayers.find((p) => p.name === "Fajr")?.date;
         if (!fajr) return "0h 0m";
-        const mins = Math.max(differenceInMinutes(now, fajr), 0);
+        const mins = Math.max(differenceInMinutes(nowInTimezone, fajr), 0);
         const h = Math.floor(mins / 60);
         const m = mins % 60;
         return `${h}h ${m}m`;
-    }, [data, now]);
+    }, [data, nowInTimezone]);
 
     return (
         <main className="min-h-screen bg-[#11131d] pb-24 text-[#e1e1f0] md:pb-12">
@@ -289,7 +295,7 @@ export function PrayerPage() {
                                     {prefs.city}, {prefs.country}
                                 </p>
                                 <p className="text-5xl font-thin tracking-tight sm:text-6xl lg:text-8xl">
-                                    {format(now, "HH:mm")}
+                                    {format(nowInTimezone, "HH:mm")}
                                 </p>
                                 <p className="mt-2 text-[10px] font-bold uppercase tracking-[0.3em] text-[#f9c03d]">
                                     NEXT {focus.next.name} IN {nextPrayerCountdown}
@@ -427,7 +433,7 @@ export function PrayerPage() {
                                                 (() => {
                                                     const isTodayRow =
                                                         day.gregorian ===
-                                                        format(now, "dd MMM yyyy");
+                                                        format(nowInTimezone, "dd MMM yyyy");
                                                     const currentPrayerName = focus.current.name;
 
                                                     const timeCellClass = (prayerName: string) =>
