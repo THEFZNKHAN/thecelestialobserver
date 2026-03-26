@@ -25,6 +25,14 @@ export const getStoredPreferences = (): LocationPreferences => {
             city: parsed.city?.trim() || defaultPreferences.city,
             country: parsed.country?.trim() || defaultPreferences.country,
             method: Number(parsed.method) || defaultPreferences.method,
+            latitude:
+                typeof parsed.latitude === "number" && Number.isFinite(parsed.latitude)
+                    ? parsed.latitude
+                    : undefined,
+            longitude:
+                typeof parsed.longitude === "number" && Number.isFinite(parsed.longitude)
+                    ? parsed.longitude
+                    : undefined,
         };
     } catch {
         return defaultPreferences;

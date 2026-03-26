@@ -37,33 +37,51 @@ export function TopNav({
         : "fixed top-0 z-50 w-full bg-[#11131d]/80 backdrop-blur-xl";
 
     return (
-        <header className={headerClass}>
-            <nav className="mx-auto flex w-full max-w-7xl items-center justify-between px-6 py-5 md:px-12">
-                <div className="text-xl font-medium tracking-tight text-[#f9c03d]">
-                    The Celestial Observer
+        <header className={`${headerClass} hidden md:block`}>
+            <nav className="mx-auto w-full max-w-7xl px-4 py-3 md:px-8 lg:px-12">
+                <div className="flex items-center justify-between">
+                    <div className="text-base font-medium tracking-tight text-[#f9c03d] sm:text-xl">
+                        The Celestial Observer
+                    </div>
+                    <div className="hidden items-center gap-8 md:flex">
+                        {navItems.map((item) => (
+                            <Link
+                                key={item.key}
+                                href={item.href}
+                                className={
+                                    item.key === active
+                                        ? "inline-flex w-20 justify-center border-b-2 border-[#f9c03d] pb-1 text-[#f9c03d]"
+                                        : "inline-flex w-20 justify-center text-[#c7c6c6] opacity-70 hover:text-[#f9c03d]"
+                                }
+                            >
+                                {item.label}
+                            </Link>
+                        ))}
+                    </div>
+                    <div className="flex items-center gap-3 sm:gap-6">
+                        <span className="material-symbols-outlined text-[20px] text-[#c7c6c6] opacity-70">
+                            notifications
+                        </span>
+                        <span className="material-symbols-outlined text-[20px] text-[#c7c6c6] opacity-70">
+                            settings
+                        </span>
+                    </div>
                 </div>
-                <div className="hidden items-center gap-8 md:flex">
+
+                <div className="mt-3 flex gap-2 overflow-x-auto pb-1 md:hidden">
                     {navItems.map((item) => (
                         <Link
                             key={item.key}
                             href={item.href}
                             className={
                                 item.key === active
-                                    ? "inline-flex w-20 justify-center border-b-2 border-[#f9c03d] pb-1 text-[#f9c03d]"
-                                    : "inline-flex w-20 justify-center text-[#c7c6c6] opacity-70 hover:text-[#f9c03d]"
+                                    ? "shrink-0 rounded-full border border-[#f9c03d]/30 bg-[#f9c03d]/10 px-3 py-1.5 text-xs font-semibold text-[#f9c03d]"
+                                    : "shrink-0 rounded-full border border-[#4f4634]/20 bg-[#191b25]/60 px-3 py-1.5 text-xs text-[#c7c6c6] hover:text-[#f9c03d]"
                             }
                         >
                             {item.label}
                         </Link>
                     ))}
-                </div>
-                <div className="flex items-center gap-6">
-                    <span className="material-symbols-outlined text-[#c7c6c6] opacity-70">
-                        notifications
-                    </span>
-                    <span className="material-symbols-outlined text-[#c7c6c6] opacity-70">
-                        settings
-                    </span>
                 </div>
             </nav>
         </header>

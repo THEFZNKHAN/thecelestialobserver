@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { getCurrentAndNextPrayer } from "@/lib/prayer";
 import { defaultPreferences, getStoredPreferences, setStoredPreferences } from "@/lib/storage";
+import { MobileBottomNav } from "@/components/site/mobile-bottom-nav";
 import { TopNav } from "@/components/site/top-nav";
 import type { DashboardData, LocationPreferences } from "@/lib/types";
 
@@ -33,6 +34,10 @@ export function LandingPage() {
             country: nextPrefs.country,
             method: String(nextPrefs.method),
         });
+        if (typeof nextPrefs.latitude === "number" && typeof nextPrefs.longitude === "number") {
+            params.set("latitude", String(nextPrefs.latitude));
+            params.set("longitude", String(nextPrefs.longitude));
+        }
         return fetch(`/api/dashboard?${params.toString()}`)
             .then((res) => res.json())
             .then((payload: DashboardData) => {
@@ -176,7 +181,13 @@ export function LandingPage() {
             setLocationMessage("Please enter both city and country.");
             return;
         }
-        const nextPrefs: LocationPreferences = { ...prefs, city, country };
+        const nextPrefs: LocationPreferences = {
+            ...prefs,
+            city,
+            country,
+            latitude: undefined,
+            longitude: undefined,
+        };
         await applyLocation(nextPrefs);
         setLocationMessage("Location updated.");
     };
@@ -203,7 +214,13 @@ export function LandingPage() {
                         payload.address?.village ||
                         prefs.city;
                     const country = payload.address?.country || prefs.country;
-                    const nextPrefs: LocationPreferences = { ...prefs, city, country };
+                    const nextPrefs: LocationPreferences = {
+                        ...prefs,
+                        city,
+                        country,
+                        latitude: coords.latitude,
+                        longitude: coords.longitude,
+                    };
                     setCityInput(city);
                     setCountryInput(country);
                     await applyLocation(nextPrefs);
@@ -224,6 +241,8 @@ export function LandingPage() {
             const payload = (await res.json()) as {
                 city?: string;
                 country?: string;
+                latitude?: number;
+                longitude?: number;
                 detected?: boolean;
                 error?: string;
             };
@@ -233,18 +252,35 @@ export function LandingPage() {
             }
             setCityInput(payload.city);
             setCountryInput(payload.country);
-            await applyLocation({ ...prefs, city: payload.city, country: payload.country });
+            await applyLocation({
+                ...prefs,
+                city: payload.city,
+                country: payload.country,
+                latitude:
+                    typeof (payload as { latitude?: number }).latitude === "number"
+                        ? (payload as { latitude?: number }).latitude
+                        : prefs.latitude,
+                longitude:
+                    typeof (payload as { longitude?: number }).longitude === "number"
+                        ? (payload as { longitude?: number }).longitude
+                        : prefs.longitude,
+            });
             setLocationMessage("Location detected from network.");
         } catch {
             setLocationMessage("Could not detect location.");
         }
     };
 
-    const handlePickSuggestion = async (city: string, country: string) => {
+    const handlePickSuggestion = async (
+        city: string,
+        country: string,
+        latitude: number,
+        longitude: number,
+    ) => {
         setCityInput(city);
         setCountryInput(country);
         setCitySuggestions([]);
-        await applyLocation({ ...prefs, city, country });
+        await applyLocation({ ...prefs, city, country, latitude, longitude });
         setLocationModal(null);
     };
 
@@ -252,8 +288,8 @@ export function LandingPage() {
         <div className="bg-[#11131d] text-[#e1e1f0]">
             <TopNav active="home" transparentOnTop />
 
-            <main>
-                <section className="relative flex min-h-[921px] items-center justify-center overflow-hidden px-8">
+            <main className="pb-24 md:pb-0">
+                <section className="relative flex min-h-[760px] items-center justify-center overflow-hidden px-4 pb-8 pt-6 sm:px-6 md:min-h-[860px] md:pt-24 lg:px-8">
                     <div className="absolute inset-0 z-0">
                         <img
                             alt="night sky with crescent moon"
@@ -263,13 +299,13 @@ export function LandingPage() {
                         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#11131d]/50 to-[#11131d]" />
                     </div>
 
-                    <div className="relative z-10 mx-auto grid w-full max-w-7xl grid-cols-1 items-end gap-12 lg:grid-cols-12">
+                    <div className="relative z-10 mx-auto grid w-full max-w-7xl grid-cols-1 items-end gap-10 lg:grid-cols-12 lg:gap-12">
                         <div className="space-y-8 lg:col-span-7">
                             <div className="space-y-2">
                                 <span className="text-xs font-bold uppercase tracking-[0.2em] text-[#f9c03d]">
                                     Sacred Precision
                                 </span>
-                                <h1 className="text-5xl font-light leading-[1.1] text-white md:text-7xl">
+                                <h1 className="text-4xl font-light leading-[1.1] text-white sm:text-5xl md:text-6xl lg:text-7xl">
                                     Align with the <br />
                                     <span className="font-normal italic text-[#f9c03d]">
                                         Celestial
@@ -277,7 +313,7 @@ export function LandingPage() {
                                     Rhythm.
                                 </h1>
                             </div>
-                            <p className="max-w-lg text-lg leading-relaxed text-[#c7c6c6]">
+                            <p className="max-w-xl text-base leading-relaxed text-[#c7c6c6] md:text-lg">
                                 {dailyQuote}
                             </p>
                             <div className="flex flex-wrap gap-4 pt-4">
@@ -299,7 +335,7 @@ export function LandingPage() {
                         </div>
 
                         <div className="lg:col-span-5">
-                            <div className="relative overflow-hidden rounded-3xl border border-[#4f4634]/10 bg-[rgba(50,52,63,0.6)] p-8 shadow-2xl">
+                            <div className="relative overflow-hidden rounded-3xl border border-[#4f4634]/10 bg-[rgba(50,52,63,0.6)] p-5 shadow-2xl sm:p-6 lg:p-8">
                                 <div className="absolute right-0 top-0 p-6 opacity-20">
                                     <span
                                         className="material-symbols-outlined text-8xl text-[#f9c03d]"
@@ -376,7 +412,7 @@ export function LandingPage() {
                     </div>
                 </section>
 
-                <section className="mx-auto max-w-7xl space-y-16 px-8 py-32">
+                <section className="mx-auto max-w-7xl space-y-10 px-4 py-16 sm:px-6 md:space-y-12 lg:space-y-16 lg:px-8 lg:py-24">
                     <div className="max-w-2xl">
                         <h2 className="mb-4 text-4xl font-light leading-tight text-white">
                             Precision crafted for your{" "}
@@ -387,7 +423,7 @@ export function LandingPage() {
                             and your devotion.
                         </p>
                     </div>
-                    <div className="grid h-auto grid-cols-1 gap-6 md:h-[600px] md:grid-cols-12">
+                    <div className="grid h-auto grid-cols-1 gap-4 md:h-[600px] md:grid-cols-12 md:gap-6">
                         <div className="group relative overflow-hidden rounded-3xl bg-[#191b25] p-10 md:col-span-8">
                             <div className="relative z-10 max-w-sm">
                                 <span className="material-symbols-outlined mb-6 text-4xl text-[#f9c03d]">
@@ -462,7 +498,7 @@ export function LandingPage() {
                     </div>
                 </section>
 
-                <section className="border-y border-[#4f4634]/10 bg-[#0c0e18] px-8 py-24">
+                <section className="border-y border-[#4f4634]/10 bg-[#0c0e18] px-4 py-14 sm:px-6 lg:px-8 lg:py-24">
                     <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-12 md:flex-row">
                         <div className="space-y-4 text-center md:text-left">
                             <h2 className="text-3xl font-light text-white">Ready to observe?</h2>
@@ -505,7 +541,7 @@ export function LandingPage() {
 
             {locationModal && (
                 <div className="fixed inset-0 z-[70] grid place-items-center bg-black/60 px-4">
-                    <div className="w-full max-w-md rounded-2xl border border-[#4f4634]/20 bg-[#191b25] p-5 shadow-2xl">
+                    <div className="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-2xl border border-[#4f4634]/20 bg-[#191b25] p-5 shadow-2xl">
                         <div className="mb-4 flex items-start justify-between">
                             <div>
                                 <h3 className="text-lg font-medium text-white">
@@ -597,7 +633,12 @@ export function LandingPage() {
                                         <button
                                             key={`${item.city}-${item.country}-${item.latitude}`}
                                             onClick={() =>
-                                                handlePickSuggestion(item.city, item.country)
+                                                handlePickSuggestion(
+                                                    item.city,
+                                                    item.country,
+                                                    item.latitude,
+                                                    item.longitude,
+                                                )
                                             }
                                             className="block w-full border-b border-[#4f4634]/10 px-3 py-2 text-left text-sm text-white transition-colors hover:bg-[#1d1f2a]"
                                         >
@@ -613,6 +654,7 @@ export function LandingPage() {
                     </div>
                 </div>
             )}
+            <MobileBottomNav />
         </div>
     );
 }

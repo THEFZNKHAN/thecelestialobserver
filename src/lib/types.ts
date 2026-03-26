@@ -6,6 +6,8 @@ export type LocationPreferences = {
     city: string;
     country: string;
     method: number;
+    latitude?: number;
+    longitude?: number;
 };
 
 export type HijriDate = {

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+import { MobileBottomNav } from "@/components/site/mobile-bottom-nav";
 import { TopNav } from "@/components/site/top-nav";
 import { defaultPreferences, getStoredPreferences } from "@/lib/storage";
 import type { CalendarDay, LocationPreferences } from "@/lib/types";
@@ -27,6 +28,10 @@ export function CalendarPage() {
             month: String(month),
             year: String(year),
         });
+        if (typeof stored.latitude === "number" && typeof stored.longitude === "number") {
+            params.set("latitude", String(stored.latitude));
+            params.set("longitude", String(stored.longitude));
+        }
 
         fetch(`/api/calendar?${params.toString()}`)
             .then((res) => res.json())
@@ -44,6 +49,10 @@ export function CalendarPage() {
                     month: String(nextMonth),
                     year: String(nextYear),
                 });
+                if (typeof stored.latitude === "number" && typeof stored.longitude === "number") {
+                    nextParams.set("latitude", String(stored.latitude));
+                    nextParams.set("longitude", String(stored.longitude));
+                }
 
                 return fetch(`/api/calendar?${nextParams.toString()}`)
                     .then((res) => res.json())
@@ -196,20 +205,197 @@ export function CalendarPage() {
         return futureDays as Array<{ title: string; subtitle: string; gregorian: string }>;
     }, [eventDays, activeDay]);
 
+    const mobileCalendarCells = useMemo(() => {
+        const blanks = Array.from({ length: leadingBlankDays }).map((_, i) => ({
+            key: `blank-${i}`,
+            blank: true as const,
+        }));
+        const mapped = days.map((day) => ({
+            key: day.gregorian,
+            blank: false as const,
+            day,
+            isToday: isViewingCurrentMonth && day.gregorian === todayLabel,
+        }));
+        return [...blanks, ...mapped];
+    }, [days, isViewingCurrentMonth, leadingBlankDays, todayLabel]);
+
     return (
-        <main className="min-h-screen bg-[#0b1020] text-[#e1e1f0]">
+        <main className="min-h-screen bg-[#0b1020] pb-24 text-[#e1e1f0] md:pb-8">
             <TopNav active="calendar" />
 
-            <div className="mx-auto max-w-[1240px] px-4 pb-8 pt-28 md:px-6">
+            <div className="mx-auto max-w-[1240px] px-4 pb-8 pt-6 md:hidden">
+                <section className="relative">
+                    <div className="flex flex-col gap-1">
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-[#f9c03d]">
+                            Islamic Calendar
+                        </span>
+                        <h2 className="text-4xl font-extralight tracking-tight text-[#e1e1f0]">
+                            {summary.replace(" AH", "")}
+                        </h2>
+                    </div>
+                    <div className="absolute right-0 top-0 opacity-20">
+                        <span className="material-symbols-outlined text-8xl text-[#f9c03d]">
+                            nights_stay
+                        </span>
+                    </div>
+                </section>
+
+                <section className="mt-6 grid grid-cols-12 gap-4">
+                    <article className="col-span-12 relative overflow-hidden rounded-[2rem] bg-[#191b25] p-6">
+                        <div className="absolute -bottom-10 -right-10 h-40 w-40 rounded-full bg-[#f9c03d]/5 blur-3xl" />
+                        <div className="relative z-10 flex items-center justify-between">
+                            <div>
+                                <h3 className="mb-1 text-sm font-medium text-[#c7c6c6]">
+                                    Current Phase
+                                </h3>
+                                <p className="text-2xl font-light text-[#e1e1f0]">{lunarPhase}</p>
+                                <div className="mt-4 inline-flex items-center rounded-full bg-[#f9c03d]/10 px-3 py-1">
+                                    <span className="text-[10px] font-bold uppercase tracking-widest text-[#f9c03d]">
+                                        Day {activeDay?.hijriDay ?? "--"} of 30
+                                    </span>
+                                </div>
+                            </div>
+                            <div className="grid h-20 w-20 place-items-center rounded-full bg-gradient-to-tr from-[#11131d] via-[#191b25] to-[#f9c03d]/40">
+                                <span
+                                    className="material-symbols-outlined text-5xl text-[#f9c03d]"
+                                    style={{ fontVariationSettings: "'FILL' 1" }}
+                                >
+                                    dark_mode
+                                </span>
+                            </div>
+                        </div>
+                    </article>
+                </section>
+
+                <section className="mt-8 space-y-4">
+                    <div className="flex items-center justify-between">
+                        <h3 className="text-xl font-medium text-[#e1e1f0]">{monthLabel}</h3>
+                        <div className="flex gap-4">
+                            <button
+                                type="button"
+                                aria-label="Previous month"
+                                onClick={() =>
+                                    setViewDate(
+                                        (prev) =>
+                                            new Date(prev.getFullYear(), prev.getMonth() - 1, 1),
+                                    )
+                                }
+                            >
+                                <span className="material-symbols-outlined text-[#c7c6c6]">
+                                    chevron_left
+                                </span>
+                            </button>
+                            <button
+                                type="button"
+                                aria-label="Next month"
+                                onClick={() =>
+                                    setViewDate(
+                                        (prev) =>
+                                            new Date(prev.getFullYear(), prev.getMonth() + 1, 1),
+                                    )
+                                }
+                            >
+                                <span className="material-symbols-outlined text-[#c7c6c6]">
+                                    chevron_right
+                                </span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="rounded-[2rem] bg-[#191b25] p-4">
+                        <div className="mb-4 grid grid-cols-7">
+                            {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => (
+                                <div
+                                    key={`${d}-${i}`}
+                                    className="py-2 text-center text-[10px] font-bold uppercase text-[#8b8f9e]"
+                                >
+                                    {d}
+                                </div>
+                            ))}
+                        </div>
+                        <div className="grid grid-cols-7 gap-y-4">
+                            {mobileCalendarCells.map((cell) => {
+                                if (cell.blank) return <div key={cell.key} />;
+                                return (
+                                    <div
+                                        key={cell.key}
+                                        className={`relative flex flex-col items-center p-1 ${
+                                            cell.isToday
+                                                ? "scale-105 rounded-xl bg-[#f9c03d] text-[#402d00]"
+                                                : ""
+                                        }`}
+                                    >
+                                        <span className="text-sm font-light">
+                                            {cell.day.gregorian.split(" ")[0]}
+                                        </span>
+                                        <span
+                                            className={`text-[9px] ${
+                                                cell.isToday ? "font-medium" : "text-[#8b8f9e]"
+                                            }`}
+                                        >
+                                            {cell.day.hijriDay}
+                                        </span>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                </section>
+
+                <section className="mt-8 space-y-4 pb-6">
+                    <h3 className="text-xl font-medium text-[#e1e1f0]">Significant Dates</h3>
+                    {upcomingEvents.length > 0 ? (
+                        upcomingEvents.map((event, idx) => (
+                            <article
+                                key={event.gregorian}
+                                className="group relative flex items-center gap-4 overflow-hidden rounded-3xl bg-[#282934] p-5"
+                            >
+                                <div className="flex h-14 min-w-[3.5rem] flex-col items-center justify-center rounded-2xl bg-[#11131d]">
+                                    <span className="text-lg font-bold text-[#f9c03d]">
+                                        {event.gregorian.split(" ")[0]}
+                                    </span>
+                                    <span className="text-[8px] uppercase tracking-tighter text-[#c7c6c6]">
+                                        {event.gregorian.split(" ")[1]}
+                                    </span>
+                                </div>
+                                <div className="flex-1">
+                                    <h4 className="font-medium text-[#e1e1f0]">{event.title}</h4>
+                                    <p className="text-xs text-[#c7c6c6]">{event.subtitle}</p>
+                                </div>
+                                <span className="material-symbols-outlined text-[#6f768b] group-hover:text-[#f9c03d]">
+                                    {idx === 0
+                                        ? "auto_stories"
+                                        : idx === 1
+                                          ? "star"
+                                          : "celebration"}
+                                </span>
+                            </article>
+                        ))
+                    ) : (
+                        <article className="rounded-3xl bg-[#282934] p-5">
+                            <p className="font-medium text-[#e1e1f0]">
+                                No upcoming significant dates
+                            </p>
+                            <p className="text-xs text-[#c7c6c6]">
+                                We will show special events when available in upcoming days.
+                            </p>
+                        </article>
+                    )}
+                </section>
+            </div>
+
+            <div className="mx-auto hidden max-w-[1240px] px-4 pb-8 pt-28 md:block md:px-6">
                 <section className="grid gap-6 lg:grid-cols-12">
                     <article className="lg:col-span-8">
                         <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#f9c03d]">
                             Current Cycle
                         </p>
-                        <h1 className="mt-1 text-5xl font-light">{summary}</h1>
+                        <h1 className="mt-1 text-3xl font-light sm:text-4xl lg:text-5xl">
+                            {summary}
+                        </h1>
 
                         <div className="mt-6 flex justify-center">
-                            <div className="flex items-center gap-8 rounded-2xl bg-[#181d2b] px-7 py-3 text-sm font-semibold">
+                            <div className="flex items-center gap-4 rounded-2xl bg-[#181d2b] px-4 py-3 text-sm font-semibold sm:gap-8 sm:px-7">
                                 <button
                                     type="button"
                                     aria-label="Previous month"
@@ -227,7 +413,7 @@ export function CalendarPage() {
                                 >
                                     ‹
                                 </button>
-                                <span>{monthLabel}</span>
+                                <span className="text-center">{monthLabel}</span>
                                 <button
                                     type="button"
                                     aria-label="Next month"
@@ -248,38 +434,40 @@ export function CalendarPage() {
                             </div>
                         </div>
 
-                        <div className="mt-6 rounded-3xl bg-[#181d2b] p-4 md:p-6">
-                            <div className="grid grid-cols-7 gap-3 text-center text-[11px] font-bold uppercase tracking-[0.16em] text-[#8b8f9e]">
-                                {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
-                                    <span key={d}>{d}</span>
-                                ))}
-                            </div>
+                        <div className="mt-6 overflow-x-auto rounded-3xl bg-[#181d2b] p-4 md:p-6">
+                            <div className="min-w-[620px]">
+                                <div className="grid grid-cols-7 gap-3 text-center text-[11px] font-bold uppercase tracking-[0.16em] text-[#8b8f9e]">
+                                    {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
+                                        <span key={d}>{d}</span>
+                                    ))}
+                                </div>
 
-                            <div className="mt-4 grid grid-cols-7 gap-3">
-                                {Array.from({ length: leadingBlankDays }).map((_, i) => (
-                                    <div key={`blank-${i}`} className="h-20 rounded-2xl" />
-                                ))}
-                                {days.map((day) => {
-                                    const isToday =
-                                        isViewingCurrentMonth && day.gregorian === todayLabel;
-                                    return (
-                                        <article
-                                            key={day.gregorian}
-                                            className={`h-20 rounded-2xl p-3 ${
-                                                isToday
-                                                    ? "bg-[#7b6634]/90 text-[#f9c03d]"
-                                                    : "bg-[#1f2333] text-[#e1e1f0]"
-                                            }`}
-                                        >
-                                            <p className="text-xs opacity-80">
-                                                {day.gregorian.split(" ")[0]}
-                                            </p>
-                                            <p className="mt-1 text-xl leading-none">
-                                                {day.hijriDay}
-                                            </p>
-                                        </article>
-                                    );
-                                })}
+                                <div className="mt-4 grid grid-cols-7 gap-3">
+                                    {Array.from({ length: leadingBlankDays }).map((_, i) => (
+                                        <div key={`blank-${i}`} className="h-20 rounded-2xl" />
+                                    ))}
+                                    {days.map((day) => {
+                                        const isToday =
+                                            isViewingCurrentMonth && day.gregorian === todayLabel;
+                                        return (
+                                            <article
+                                                key={day.gregorian}
+                                                className={`h-16 rounded-2xl p-2 sm:h-20 sm:p-3 ${
+                                                    isToday
+                                                        ? "bg-[#7b6634]/90 text-[#f9c03d]"
+                                                        : "bg-[#1f2333] text-[#e1e1f0]"
+                                                }`}
+                                            >
+                                                <p className="text-xs opacity-80">
+                                                    {day.gregorian.split(" ")[0]}
+                                                </p>
+                                                <p className="mt-1 text-lg leading-none sm:text-xl">
+                                                    {day.hijriDay}
+                                                </p>
+                                            </article>
+                                        );
+                                    })}
+                                </div>
                             </div>
                         </div>
                     </article>
@@ -383,6 +571,7 @@ export function CalendarPage() {
                     </section>
                 )}
             </div>
+            <MobileBottomNav />
         </main>
     );
 }

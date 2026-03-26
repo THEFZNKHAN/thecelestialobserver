@@ -32,6 +32,13 @@ export function DashboardApp() {
                 country: currentPrefs.country,
                 method: String(currentPrefs.method),
             });
+            if (
+                typeof currentPrefs.latitude === "number" &&
+                typeof currentPrefs.longitude === "number"
+            ) {
+                params.set("latitude", String(currentPrefs.latitude));
+                params.set("longitude", String(currentPrefs.longitude));
+            }
 
             const response = await fetch(`/api/dashboard?${params.toString()}`);
             if (!response.ok) {
@@ -80,6 +87,8 @@ export function DashboardApp() {
             city: nextPrefs.city.trim(),
             country: nextPrefs.country.trim(),
             method: nextPrefs.method,
+            latitude: nextPrefs.latitude,
+            longitude: nextPrefs.longitude,
         };
         setStoredPreferences(sanitized);
         setPrefs(sanitized);
